@@ -1,0 +1,6 @@
+kaggle_env/
+# Ignore dataset file
+AI_Human.csv
+
+# Ignore Zone.Identifier metadata (Windows-specific)
+AI_Human.csv:Zone.Identifier
