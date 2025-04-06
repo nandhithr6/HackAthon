@@ -7,9 +7,9 @@ MAX_LENGTH = 1024 # Tokenizer max length (adjust if needed, but 1024 is safer fo
 LAYERS_TO_FREEZE = 6
 
 # Data configuration
-DATA_PATH = "ai_vs_human.csv" # Path to your dataset CSV
+DATA_PATH = "ai-vs-human-text/AI_Human.csv" # Path to your dataset CSV
 TEXT_COLUMN = "text"
-LABEL_COLUMN = "label" # Assuming your label column is named 'label'
+LABEL_COLUMN = "generated" # Assuming your label column is named 'label'
 TEST_SPLIT_SIZE = 0.2
 VALIDATION_SPLIT_SIZE = 0.5 # Proportion of the initial test split to use for validation (0.5 means 10% of total data)
 RANDOM_SEED = 42

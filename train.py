@@ -1,5 +1,3 @@
-# train.py
-
 import numpy as np
 import torch
 from transformers import Trainer, TrainingArguments
@@ -35,7 +33,7 @@ def main():
     """Main function to orchestrate the training process."""
     print("--- Starting Training Pipeline ---")
 
-    # 1. Load and Split Data
+    # 1. Load and Split Data (Will use the updated subset logic)
     print("\n--- Loading Data ---")
     dataset_dict = load_and_split_dataset()
     if not dataset_dict:
@@ -59,32 +57,38 @@ def main():
     if not model:
         return
 
-    # 5. Setup Training Arguments (Includes gradient accumulation and fp16)
+    # 5. Setup Training Arguments (UPDATED FOR SPEED)
     print("\n--- Configuring Training Arguments ---")
+    # Estimate steps for ~30 mins (adjust based on observed speed)
+    # If 1 step ~ 0.6s, 30 mins = 1800s -> 1800 / 0.6 = 3000 steps
+    MAX_TRAINING_STEPS = 2500 # Start with this, adjust based on actual time
+    EVAL_SAVE_STEPS = 500     # Evaluate/save periodically within max_steps
     training_args = TrainingArguments(
         output_dir=config.OUTPUT_DIR,
         logging_dir=config.LOGGING_DIR,
         learning_rate=config.LEARNING_RATE,
-        num_train_epochs=config.NUM_TRAIN_EPOCHS,
+        # num_train_epochs=1, # Will likely stop due to max_steps before 1 epoch
+        max_steps=MAX_TRAINING_STEPS, # ADDED: Stop after this many steps
         per_device_train_batch_size=config.PER_DEVICE_TRAIN_BATCH_SIZE,
         per_device_eval_batch_size=config.PER_DEVICE_EVAL_BATCH_SIZE,
-        gradient_accumulation_steps=config.GRADIENT_ACCUMULATION_STEPS, # For GPU memory optimization
-        fp16=torch.cuda.is_available(),                               # Use FP16 if GPU is available
-        evaluation_strategy=config.EVALUATION_STRATEGY,
-        save_strategy=config.SAVE_STRATEGY,
-        load_best_model_at_end=config.LOAD_BEST_MODEL_AT_END,
+        gradient_accumulation_steps=config.GRADIENT_ACCUMULATION_STEPS,
+        fp16=torch.cuda.is_available(),
+        evaluation_strategy="steps", # CHANGED: Evaluate based on steps
+        eval_steps=EVAL_SAVE_STEPS,     # ADDED: How often to evaluate
+        save_strategy="steps",       # CHANGED: Save based on steps
+        save_steps=EVAL_SAVE_STEPS,       # ADDED: How often to save checkpoints
+        load_best_model_at_end=True, # Load best checkpoint found during steps
         metric_for_best_model=config.METRIC_FOR_BEST_MODEL,
         greater_is_better=True,
         report_to=config.REPORT_TO,
-        logging_steps=config.LOGGING_STEPS,
-        save_total_limit=config.SAVE_TOTAL_LIMIT,
-        # optim="adamw_torch_fused", # Consider if using PyTorch 2.0+
+        logging_steps=config.LOGGING_STEPS, # Log loss frequently
+        save_total_limit=2, # Keep last 2 checkpoints (best + maybe latest)
     )
     print(f"Training arguments configured. Output directory: {config.OUTPUT_DIR}")
+    print(f"  --- HACKATHON MODE: Training limited to max_steps={MAX_TRAINING_STEPS} ---")
     print(f"  FP16 Enabled: {training_args.fp16}")
     print(f"  Train Batch Size (per device): {training_args.per_device_train_batch_size}")
     print(f"  Gradient Accumulation Steps: {training_args.gradient_accumulation_steps}")
-    # Calculate effective batch size considering potential multiple GPUs in future
     num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 1
     effective_batch_size = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps * num_gpus
     print(f"  Effective Batch Size: {effective_batch_size}")
@@ -102,20 +106,20 @@ def main():
     )
     print("Trainer initialized.")
 
-    # 7. Start Training
+    # 7. Start Training (will stop after max_steps)
     print("\n--- Starting Training ---")
     try:
         train_result = trainer.train()
-        print("Training finished.")
+        print("Training finished (reached max_steps or completed).")
         metrics = train_result.metrics
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
         trainer.save_state()
 
-        # 8. Save the best model
+        # 8. Save the best model (or the final one if load_best isn't used/effective)
         print("\n--- Saving Final Model ---")
         trainer.save_model(config.FINAL_MODEL_PATH)
-        print(f"Best model saved to {config.FINAL_MODEL_PATH}")
+        print(f"Model saved to {config.FINAL_MODEL_PATH}")
 
     except torch.cuda.OutOfMemoryError: # Catch specific OOM errors
         print("\n--- ERROR: CUDA Out of Memory ---")

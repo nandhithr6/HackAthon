@@ -81,8 +81,8 @@ def predict_text(text, threshold=config.SCORE_THRESHOLD):
 if __name__ == "__main__":
     # Example Usage
     if predictor_model and predictor_tokenizer: # Only run examples if model loaded
-        test_text_human = "I walked my dog in the park this morning. It was lovely and sunny, and he chased a squirrel."
-        test_text_ai = "The synergistic application of blockchain technology and artificial intelligence facilitates unprecedented levels of data integrity and automated decision-making processes across decentralized networks."
+        test_text_human = "hi my name is abiram and i love to hangout with girls and invite them to dates and"
+        test_text_ai = "Hi, my name is Abiram. I enjoy spending time with friends, especially going out with girls, planning fun hangouts, and inviting them on casual dates. I love creating memorable experiences, sharing good vibes, and just enjoying life in great company."
 
         print("\n--- Prediction Examples ---")
 
